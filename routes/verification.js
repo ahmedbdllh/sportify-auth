@@ -388,15 +388,14 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
   console.log('Verify email request body:', JSON.stringify(req.body, null, 2));
   console.log('Verify email request headers:', JSON.stringify(req.headers, null, 2));
   
-  const { email, code } = req.body;
+  const { code } = req.body;
   
-  if (!email || !code) {
-    console.log('Missing email or code - email:', email, 'code:', code);
-    return res.status(400).json({ success: false, msg: 'Email and code are required.' });
-  }
-  try {    console.log('Checking PendingUser for email:', email, 'code:', code);
-    // First check PendingUser collection
-    const pending = await PendingUser.findOne({ email, verificationCode: code });
+  if (!code) {
+    console.log('Missing code - code:', code);
+    return res.status(400).json({ success: false, msg: 'Verification code is required.' });
+  }  try {    console.log('Checking PendingUser for code:', code);
+    // First check PendingUser collection - find by verification code only
+    const pending = await PendingUser.findOne({ verificationCode: code });
     console.log('PendingUser found:', pending ? 'Yes' : 'No');
     if (pending) {
       // Handle PendingUser verification
@@ -407,18 +406,16 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
       if (user) {
         await PendingUser.deleteOne({ email });
         return res.status(400).json({ success: false, msg: 'Account already exists.' });
-      }
-
-      // Check for duplicate phone number before creating user
+      }      // Check for duplicate phone number before creating user
       const existingPhoneUser = await User.findOne({ phoneNumber: pending.phoneNumber });
       if (existingPhoneUser) {
         console.log('Duplicate phone number found:', pending.phoneNumber);
-        await PendingUser.deleteOne({ email });
+        await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ 
           success: false, 
           msg: 'This phone number is already registered with another account. Please use a different phone number.' 
         });
-      }      user = new User({
+      }user = new User({
         fullName: pending.fullName,
         email: pending.email,
         password: pending.password,
@@ -427,18 +424,16 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         position: pending.position,
         role: 'Player',
         isVerified: true
-      });
-
-      try {
+      });      try {
         await user.save();
-        await PendingUser.deleteOne({ email });
+        await PendingUser.deleteOne({ email: pending.email });
         return res.json({ success: true, msg: 'Account verified successfully. You can now sign in.' });
       } catch (saveError) {
         console.error('Error saving user during verification:', saveError);
         
         // Handle duplicate key errors specifically
         if (saveError.code === 11000) {
-          await PendingUser.deleteOne({ email });
+          await PendingUser.deleteOne({ email: pending.email });
           
           if (saveError.keyPattern && saveError.keyPattern.phoneNumber) {
             return res.status(400).json({ 
@@ -459,31 +454,23 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         }
         
         throw saveError; // Re-throw if it's not a duplicate key error
-      }}
-
-    console.log('Checking User collection for unverified user:', email);
-    // Check User collection for unverified users
-    const user = await User.findOne({ email, isVerified: false });
+      }}    console.log('Checking User collection for unverified user with code:', code);
+    // Check User collection for unverified users - find by verification token only
+    const user = await User.findOne({ verificationToken: code, isVerified: false });
     console.log('Unverified User found:', user ? 'Yes' : 'No');
     if (!user) {
-      return res.status(400).json({ success: false, msg: 'Invalid code or email.' });
-    }
-
-    // For users in User collection, we need to check if they have a verification code
-    // This assumes User model has verificationCode and verificationExpires fields
-    // If not, we may need to add them or handle differently
-    if (user.verificationCode !== code) {
-      return res.status(400).json({ success: false, msg: 'Invalid code or email.' });
-    }
-
-    if (!user.verificationExpires || user.verificationExpires < new Date()) {
+      return res.status(400).json({ success: false, msg: 'Invalid verification code.' });
+    }    // For users in User collection, we already found them by verification token
+    // so we just need to check if the token hasn't expired
+    if (!user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
+      console.log('Verification token expired:', user.verificationTokenExpires);
       return res.status(400).json({ success: false, msg: 'Verification code expired.' });
     }
 
     // Update user to verified
     user.isVerified = true;
-    user.verificationCode = undefined;
-    user.verificationExpires = undefined;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
     await user.save();    res.json({ success: true, msg: 'Account verified successfully. You can now sign in.' });
   } catch (err) {
     console.error('Error in verify-email:', err);
