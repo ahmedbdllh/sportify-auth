@@ -406,17 +406,16 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
   }  try {    console.log('Checking PendingUser for code:', actualCode);
     // First check PendingUser collection - find by verification code only
     const pending = await PendingUser.findOne({ verificationCode: actualCode });
-    console.log('PendingUser found:', pending ? 'Yes' : 'No');
-    if (pending) {
+    console.log('PendingUser found:', pending ? 'Yes' : 'No');    if (pending) {
       // Handle PendingUser verification
       if (!pending.verificationExpires || pending.verificationExpires < new Date()) {
-        await PendingUser.deleteOne({ email });
+        await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ success: false, msg: 'Verification code expired.' });
-      }      let user = await User.findOne({ email });
+      }      let user = await User.findOne({ email: pending.email });
       if (user) {
-        await PendingUser.deleteOne({ email });
+        await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ success: false, msg: 'Account already exists.' });
-      }      // Check for duplicate phone number before creating user
+      }// Check for duplicate phone number before creating user
       const existingPhoneUser = await User.findOne({ phoneNumber: pending.phoneNumber });
       if (existingPhoneUser) {
         console.log('Duplicate phone number found:', pending.phoneNumber);
