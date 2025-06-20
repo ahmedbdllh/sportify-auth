@@ -411,20 +411,24 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
       if (!pending.verificationExpires || pending.verificationExpires < new Date()) {
         await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ success: false, msg: 'Verification code expired.' });
-      }      let user = await User.findOne({ email: pending.email });
-      if (user) {
+      }      let user = await User.findOne({ email: pending.email });      if (user) {
+        console.log('User already exists with email:', pending.email, 'isVerified:', user.isVerified);
         await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ success: false, msg: 'Account already exists.' });
-      }// Check for duplicate phone number before creating user
+      }
+
+      // Check for duplicate phone number before creating user
       const existingPhoneUser = await User.findOne({ phoneNumber: pending.phoneNumber });
       if (existingPhoneUser) {
-        console.log('Duplicate phone number found:', pending.phoneNumber);
+        console.log('Duplicate phone number found:', pending.phoneNumber, 'for email:', existingPhoneUser.email);
         await PendingUser.deleteOne({ email: pending.email });
         return res.status(400).json({ 
           success: false, 
           msg: 'This phone number is already registered with another account. Please use a different phone number.' 
         });
-      }user = new User({
+      }
+
+      console.log('Creating new user for email:', pending.email, 'phone:', pending.phoneNumber);      user = new User({
         fullName: pending.fullName,
         email: pending.email,
         password: pending.password,
@@ -432,13 +436,21 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         phoneNumber: pending.phoneNumber,
         position: pending.position,
         role: 'Player',
-        isVerified: true
-      });      try {
+        isVerified: true,
+        // Don't set cin for Players to avoid null unique constraint issues
+        ...(pending.role === 'Manager' && { cin: pending.cin })
+      });try {
         await user.save();
         await PendingUser.deleteOne({ email: pending.email });
-        return res.json({ success: true, msg: 'Account verified successfully. You can now sign in.' });
-      } catch (saveError) {
-        console.error('Error saving user during verification:', saveError);
+        return res.json({ success: true, msg: 'Account verified successfully. You can now sign in.' });      } catch (saveError) {
+        console.error('Error saving user during verification:', saveError.message);
+        console.error('Error code:', saveError.code);
+        console.error('Error keyPattern:', saveError.keyPattern);
+        console.error('User data attempted to save:', {
+          email: pending.email,
+          phoneNumber: pending.phoneNumber,
+          fullName: pending.fullName
+        });
         
         // Handle duplicate key errors specifically
         if (saveError.code === 11000) {

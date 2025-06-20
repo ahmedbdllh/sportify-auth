@@ -28,12 +28,12 @@ const userSchema = new mongoose.Schema({
   profileImage: {
     type: String, // Store path or URL to the profile image
     required: false
-  },
-  // Manager specific fields (conditionally required based on role)
+  },  // Manager specific fields (conditionally required based on role)
   cin: {
     type: String,
     required: function() { return this.role === 'Manager'; },
-    unique: true // Ensure CIN is unique
+    unique: true, // Ensure CIN is unique
+    sparse: true  // Allow multiple null values, only enforce uniqueness for non-null values
   },
   phoneNumber: {
     type: String,
