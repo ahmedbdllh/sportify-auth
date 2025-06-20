@@ -517,7 +517,7 @@ const parseDeviceInfo = (userAgent, ip) => {
         from: process.env.EMAIL_FROM || process.env.EMAIL_USERNAME || process.env.EMAIL_USER,
         to: manager.email,
         subject: '🎉 Your Sportify Manager Account Has Been Approved',
-        text: `Welcome to Sportify!\n\nYour manager account has been approved and is now active!\n\nYour temporary password is: ${rawPassword}\n\nImportant: Please login and change your password immediately for security.\n\nLogin at: https://sportify.com/manager-signin\n\nIf you have any questions, contact our support team at support@sportify.com\n\nBest regards,\nThe Sportify Team`,
+        text: `Welcome to Sportify!\n\nYour manager account has been approved and is now active!\n\nYour temporary password is: ${rawPassword}\n\nImportant: Please login and change your password immediately for security.\n\nLogin at: https://sportify-mu.vercel.app/manager-signin\n\nIf you have any questions, contact our support team at support@sportify.com\n\nBest regards,\nThe Sportify Team`,
         html: `
           <!DOCTYPE html>
           <html lang="en">
@@ -805,7 +805,7 @@ const parseDeviceInfo = (userAgent, ip) => {
                   </div>
                   
                   <div style="text-align: center; margin: 32px 0;">
-                    <a href="https://sportify.com/manager-signin" class="login-button">
+                    <a href="https://sportify-mu.vercel.app/manager-signin" class="login-button">
                       Access Manager Dashboard
                     </a>
                   </div>
