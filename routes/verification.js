@@ -385,9 +385,15 @@ router.post('/player-signup',
 
 // Verify email (handles both PendingUser and unverified User)
 router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
-  console.log('Verify email request:', req.body);
+  console.log('Verify email request body:', JSON.stringify(req.body, null, 2));
+  console.log('Verify email request headers:', JSON.stringify(req.headers, null, 2));
+  
   const { email, code } = req.body;
-  if (!email || !code) return res.status(400).json({ success: false, msg: 'Email and code are required.' });
+  
+  if (!email || !code) {
+    console.log('Missing email or code - email:', email, 'code:', code);
+    return res.status(400).json({ success: false, msg: 'Email and code are required.' });
+  }
   try {    console.log('Checking PendingUser for email:', email, 'code:', code);
     // First check PendingUser collection
     const pending = await PendingUser.findOne({ email, verificationCode: code });
