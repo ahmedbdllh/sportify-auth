@@ -17,7 +17,8 @@ app.use(helmet({
 
 // Enable CORS first (before static files)
 app.use((req, res, next) => {  const allowedOrigins = [
-    'http://localhost:3000',  // React frontend
+    'https://sportify-auth.onrender.com',  // Production frontend
+    'http://localhost:3000',  // React frontend (for development)
     'http://localhost:64700', // Flutter web
     'http://127.0.0.1:64700', // Flutter web alternative
   ];
@@ -44,7 +45,7 @@ app.use(express.json());
 
 // Serve static files from the 'uploads' directory with CORS headers
 app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.header('Access-Control-Allow-Origin', 'https://sportify-auth.onrender.com');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(path.join(__dirname, 'uploads')));

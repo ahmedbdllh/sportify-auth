@@ -1632,10 +1632,8 @@ const parseDeviceInfo = (userAgent, ip) => {
 
       // Get reset token
       const resetToken = user.getResetPasswordToken();
-      await user.save({ validateBeforeSave: false });
-
-      // Create reset URL - point to frontend
-      const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;      // Email transporter setup
+      await user.save({ validateBeforeSave: false });      // Create reset URL - point to frontend
+      const resetUrl = `https://sportify-auth.onrender.com/reset-password/${resetToken}`;      // Email transporter setup
       const transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE || 'gmail',
         auth: {
