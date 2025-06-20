@@ -428,7 +428,7 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         });
       }
 
-      console.log('Creating new user for email:', pending.email, 'phone:', pending.phoneNumber);      user = new User({
+      console.log('Creating new user for email:', pending.email, 'phone:', pending.phoneNumber);      const userData = {
         fullName: pending.fullName,
         email: pending.email,
         password: pending.password,
@@ -436,10 +436,15 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         phoneNumber: pending.phoneNumber,
         position: pending.position,
         role: 'Player',
-        isVerified: true,
-        // Don't set cin for Players to avoid null unique constraint issues
-        ...(pending.role === 'Manager' && { cin: pending.cin })
-      });try {
+        isVerified: true
+      };
+
+      // Only add cin field if it exists and is not null/undefined
+      if (pending.cin) {
+        userData.cin = pending.cin;
+      }
+
+      user = new User(userData);try {
         await user.save();
         await PendingUser.deleteOne({ email: pending.email });
         return res.json({ success: true, msg: 'Account verified successfully. You can now sign in.' });      } catch (saveError) {
