@@ -385,17 +385,27 @@ router.post('/player-signup',
 
 // Verify email (handles both PendingUser and unverified User)
 router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
-  console.log('Verify email request body:', JSON.stringify(req.body, null, 2));
-  console.log('Verify email request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('=== VERIFICATION REQUEST DEBUG ===');
+  console.log('Full request body:', JSON.stringify(req.body, null, 2));
+  console.log('Request body keys:', Object.keys(req.body));
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Content-Type:', req.headers['content-type']);
   
-  const { code } = req.body;
+  const { code, verificationCode } = req.body;
   
-  if (!code) {
-    console.log('Missing code - code:', code);
+  // Check for both possible field names
+  const actualCode = code || verificationCode;
+  
+  console.log('Extracted code:', actualCode);
+  console.log('Code field value:', code);
+  console.log('VerificationCode field value:', verificationCode);
+  
+  if (!actualCode) {
+    console.log('Missing verification code - code:', code, 'verificationCode:', verificationCode);
     return res.status(400).json({ success: false, msg: 'Verification code is required.' });
-  }  try {    console.log('Checking PendingUser for code:', code);
+  }  try {    console.log('Checking PendingUser for code:', actualCode);
     // First check PendingUser collection - find by verification code only
-    const pending = await PendingUser.findOne({ verificationCode: code });
+    const pending = await PendingUser.findOne({ verificationCode: actualCode });
     console.log('PendingUser found:', pending ? 'Yes' : 'No');
     if (pending) {
       // Handle PendingUser verification
@@ -454,13 +464,13 @@ router.post('/verify-email', verifyRecaptchaOptional, async (req, res) => {
         }
         
         throw saveError; // Re-throw if it's not a duplicate key error
-      }}    console.log('Checking User collection for unverified user with code:', code);
+      }}    console.log('Checking User collection for unverified user with code:', actualCode);
     // Check User collection for unverified users - find by verification token only
-    const user = await User.findOne({ verificationToken: code, isVerified: false });
+    const user = await User.findOne({ verificationToken: actualCode, isVerified: false });
     console.log('Unverified User found:', user ? 'Yes' : 'No');
     if (!user) {
       return res.status(400).json({ success: false, msg: 'Invalid verification code.' });
-    }    // For users in User collection, we already found them by verification token
+    }// For users in User collection, we already found them by verification token
     // so we just need to check if the token hasn't expired
     if (!user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
       console.log('Verification token expired:', user.verificationTokenExpires);
